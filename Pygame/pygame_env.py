@@ -4,6 +4,11 @@ import numpy as np
 
 pygame.init()
 
+#Set the kinematics type to use
+#FORWARD - Control the lengths of the cords , then compute x,y
+#INVERSE - Control the x,y , then compute lengths
+KINEMATICS_TYPE = 'INVERSE'
+
 # Setting up color objects
 BLUE  = (0, 0, 255)
 RED   = (255, 0, 0)
@@ -15,8 +20,8 @@ GREY = (140,140,140)
 # Creating a board that is 30" Wide by 48" tall.
 # Scale is # of pixels per inch
 scale = 20
-height = 48 * scale
-width = 30 * scale
+height = 40 * scale
+width = 24 * scale
 
 #setup the position of the actuators
 #Compute everything in inches, then scale later
@@ -24,27 +29,43 @@ A = ((0,0))
 B = ((30, 0))
 L_a = 40
 L_b = 40
-L_c = 30
+L_c = 24
+current_position_x = 12
+current_position_y = 30
+
 
 #Create a list of circles
 #(center x, center y, radius)
-circle_def_list = [(20,15,3),
-                   (25,10,3)]
-
+circle_def_list = [(5,4,1.5),
+                   (12,5,1),
+                   (17,6,1.5),
+                   (21,3,0.5),
+                   (4,10,2),
+                   (8,8,1),
+                   (12,10,0.5),
+                   (16,11,1.5),
+                   (10,11,1.0)]
 
 DISPLAYSURF = pygame.display.set_mode((width,height))
 pygame.display.set_caption("Jeu Gruyere")
 DISPLAYSURF.fill(WOOD)
 
+#Given the lengths of the strings (L_a and L_b) and the distance between the two (L_c) 
+#compute the x,y (0,0) is top left
 def ForwardKinematics(L_a,  L_b,  L_c):
     #Compute the angle of A
     Angle_A = ((L_b*L_b)+(L_c*L_c)-(L_a*L_a))/(2*L_b*L_c)
     Angle_A = math.acos(Angle_A)
-    print(math.degrees(Angle_A))
-    #Computer the x,y based on a triangle
+    #Compute the x,y based on a triangle
     x = math.cos(Angle_A)*L_b
     y = math.sin(Angle_A)*L_b
     return x,y
+
+#Given x,y (0,0) is top left and the length between the two joints, compute the L_a and L_b
+def InverseKinematics(x,y,L_c):
+    L_a = math.sqrt(x*x+y*y)
+    L_b = math.sqrt((L_c-x)*(L_c-x)+y*y)
+    return L_a, L_b
 
 def DetectFall(x,y,circle_x,circle_y, circle_r):
 
@@ -62,8 +83,13 @@ def DetectFall(x,y,circle_x,circle_y, circle_r):
 
 # Beginning Game Loop
 while True:
-    #Compute the position of the ball based on the line lengths
-    current_position_x,current_position_y = ForwardKinematics(L_a,L_b,L_c)
+    if(KINEMATICS_TYPE == 'FORWARD'):
+        #Compute the position of the ball based on the line lengths
+        current_position_x,current_position_y = ForwardKinematics(L_a,L_b,L_c)
+    else:
+        #Testing the inverse kinematics
+        L_a, L_b = InverseKinematics(current_position_x,current_position_y,L_c)
+
     DISPLAYSURF.fill(WOOD)
 
     #Use the keyboard to change the line lengths
@@ -71,7 +97,8 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == pygame.KEYDOWN:
+
+        if ((event.type == pygame.KEYDOWN) and (KINEMATICS_TYPE == 'FORWARD')):
             if event.key == pygame.K_q:
                L_b -= 0.25
             if event.key == pygame.K_w:
@@ -80,14 +107,21 @@ while True:
                L_b += 0.25
             if event.key == pygame.K_s:
                L_a += 0.25
+        elif ((event.type == pygame.KEYDOWN) and (KINEMATICS_TYPE == 'INVERSE')):
+            if event.key == pygame.K_UP:
+               current_position_y -= 0.25
+            if event.key == pygame.K_DOWN:
+               current_position_y += 0.25
+            if event.key == pygame.K_RIGHT:
+               current_position_x += 0.25
+            if event.key == pygame.K_LEFT:
+               current_position_x -= 0.25
 
     #Scale from inches to pixels for drawing
     current_position = ((scale * current_position_x, scale * current_position_y))
 
     #Debugging
-    #print(L_a,L_b,current_position_x,current_position_y)
-
-    print(len(circle_def_list))
+    print(L_a,L_b,current_position_x,current_position_y)
 
     #Draw the failure areas
     for a in range(0,len(circle_def_list)):
