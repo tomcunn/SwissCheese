@@ -43,7 +43,9 @@ KINEMATICS_TYPE = 'INVERSE'
 Here are the kinematics for the two cable. 
 
 ```
-  A   L_b   B
+Not sure if L_a and L_b are swapped on this diagram.
+
+  A   L_c   B
    \       /
     \     /
  L_a \   / L_b
