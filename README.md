@@ -30,7 +30,7 @@ The engineering challenge here is creating a dual axes motion control. The inver
 ```   
 The delta Y here is larger than the delta X, so the Y axes must move faster than X axis such that both of them arrive at the same time. The issue is that the machine is not linear, so the angle of the cables come into place. 
 
-#Kinematics
+# Kinematics
 There are two types of kinematics that need to be considered here.
 
 ```
