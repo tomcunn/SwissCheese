@@ -72,4 +72,4 @@ def InverseKinematics(x,y,L_c):
 
 #Path Planning
 
-
+How do you go from (2,10) to (5,5), with (0,0) being the upper left. The delta is 3 in the X, and is 5 in the Y. Maybe we just simply have a master axis, and then have a dependent axis. Meaning that we command the X to 10 inches/min, and then we know that X needs to travel 5/3 faster, so we command the Y to 16.66 inches/min. The difficult becomes what about the acceleration phase and computing time and position to sync the two axes. The next question is what is good enough. For manual control 
