@@ -30,4 +30,15 @@ The engineering challenge here is creating a dual axes motion control. The inver
 ```   
 The delta Y here is larger than the delta X, so the Y axes must move faster than X axis such that both of them arrive at the same time. The issue is that the machine is not linear, so the angle of the cables come into place. 
 
+#Kinematics
+There are two types of kinematics that need to be considered here.
+
+```
+#Set the kinematics type to use
+#FORWARD - Control the lengths of the cords , then compute x,y
+#INVERSE - Control the x,y , then compute lengths
+KINEMATICS_TYPE = 'INVERSE'
+```
+
+
 
