@@ -40,5 +40,33 @@ There are two types of kinematics that need to be considered here.
 KINEMATICS_TYPE = 'INVERSE'
 ```
 
+Here are the kinematics for the two cable. 
+
+```
+  A   L_b   B
+   \       /
+    \     /
+ L_a \   / L_b
+      \ /
+       C
+
+#Given the lengths of the strings (L_a and L_b) and the distance between the two (L_c) 
+#compute the x,y (0,0) is top left
+def ForwardKinematics(L_a,  L_b,  L_c):
+    #Compute the angle of A
+    Angle_A = ((L_b*L_b)+(L_c*L_c)-(L_a*L_a))/(2*L_b*L_c)
+    Angle_A = math.acos(Angle_A)
+    #Compute the x,y based on a triangle
+    x = math.cos(Angle_A)*L_b
+    y = math.sin(Angle_A)*L_b
+    return x,y
+
+#Given x,y (0,0) is top left and the length between the two joints, compute the L_a and L_b
+def InverseKinematics(x,y,L_c):
+    L_a = math.sqrt(x*x+y*y)
+    L_b = math.sqrt((L_c-x)*(L_c-x)+y*y)
+    return L_a, L_b
+```
+
 
 
