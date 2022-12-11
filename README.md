@@ -79,6 +79,17 @@ How do you go from (2,10) to (5,5), with (0,0) being the upper left. The delta i
 
 # Hardware Hookup
 
+```
+//These pins have been verified to work
+#define X_STEP    A0
+#define X_DIR     A1
+#define X_ENABLE  38
+
+#define Z_STEP    46
+#define Z_DIR     48
+#define Z_ENABLE  A8
+```
+
 The stepper motor connection to the RAMPS 1.6 Board. 
 
 ![image](https://user-images.githubusercontent.com/4383135/206915399-de5b6786-f67e-4cdd-bd44-950103174a18.png)
