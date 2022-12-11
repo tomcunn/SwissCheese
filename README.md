@@ -70,5 +70,6 @@ def InverseKinematics(x,y,L_c):
     return L_a, L_b
 ```
 
+#Path Planning
 
 
