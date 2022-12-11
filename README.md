@@ -17,7 +17,9 @@ The goal is to solve this a couple of ways:
 * AI algorithm that controls the x,y position, and then computes the lengths of cords
 
 # Stepper Motors
-For the motion axes, going to try to use stepper motors running some GT2 belt in order to maintain position. The stepper motors are used because the RAMPS 1.4 board was available and does not requrie me to make a PCB for this project as the RAMPS already supports all of the I/O that are required, including some FETS for the solenoid on the crane project. 
+For the motion axes, going to try to use stepper motors running some GT2 belt in order to maintain position. The stepper motors are used because the RAMPS 1.6
+
+board was available and does not requrie me to make a PCB for this project as the RAMPS already supports all of the I/O that are required, including some FETS for the solenoid on the crane project. 
 
 The engineering challenge here is creating a dual axes motion control. The inverse and forward kinematics are solved in the python game script. The motion control consists of generating timing pulses to control the stepper motors which is pretty straightforward. The issue becomes how to control both of the motors when going between two different points.
 
@@ -73,3 +75,17 @@ def InverseKinematics(x,y,L_c):
 # Path Planning
 
 How do you go from (2,10) to (5,5), with (0,0) being the upper left. The delta is 3 in the X, and is 5 in the Y. Maybe we just simply have a master axis, and then have a dependent axis. Meaning that we command the X to 10 inches/min, and then we know that X needs to travel 5/3 faster, so we command the Y to 16.66 inches/min. The difficult becomes what about the acceleration phase and computing time and position to sync the two axes. The next question is what is good enough. For manual control 
+
+
+# Hardware Hookup
+
+The stepper motor connection to the RAMPS 1.6 Board. 
+
+![image](https://user-images.githubusercontent.com/4383135/206915399-de5b6786-f67e-4cdd-bd44-950103174a18.png)
+
+So far this appears to be the pinout of the RAMP 1.6 Board.
+
+![image](https://user-images.githubusercontent.com/4383135/206915461-dd8e6569-5e97-4169-9c45-559e67a225a7.png)
+
+
+
