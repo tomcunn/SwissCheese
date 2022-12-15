@@ -33,7 +33,7 @@ The engineering challenge here is creating a dual axes motion control. The inver
 The delta Y here is larger than the delta X, so the Y axes must move faster than X axis such that both of them arrive at the same time. The issue is that the machine is not linear, so the angle of the cables come into place. 
 
 # Kinematics
-There are two types of kinematics that need to be considered here.
+The arduino only uses the inverse kinematics. 
 
 ```
 #Set the kinematics type to use
@@ -45,31 +45,19 @@ KINEMATICS_TYPE = 'INVERSE'
 Here are the kinematics for the two cable. 
 
 ```
-Not sure if L_a and L_b are swapped on this diagram.
-
-  A   L_c   B
+.
+(0,0)
+  A    ab    B
    \       /
     \     /
- L_a \   / L_b
+ ad  \   / bd
       \ /
-       C
+       D
+#Given x,y (0,0) is top left and the length between the two joints, compute the ad and bd
 
-#Given the lengths of the strings (L_a and L_b) and the distance between the two (L_c) 
-#compute the x,y (0,0) is top left
-def ForwardKinematics(L_a,  L_b,  L_c):
-    #Compute the angle of A
-    Angle_A = ((L_b*L_b)+(L_c*L_c)-(L_a*L_a))/(2*L_b*L_c)
-    Angle_A = math.acos(Angle_A)
-    #Compute the x,y based on a triangle
-    x = math.cos(Angle_A)*L_b
-    y = math.sin(Angle_A)*L_b
-    return x,y
-
-#Given x,y (0,0) is top left and the length between the two joints, compute the L_a and L_b
-def InverseKinematics(x,y,L_c):
-    L_a = math.sqrt(x*x+y*y)
-    L_b = math.sqrt((L_c-x)*(L_c-x)+y*y)
-    return L_a, L_b
+    ad = math.sqrt(dx*dx+yx*yx)
+    bd = math.sqrt((Bx-x)*(Bx-x)+y*y)
+   
 ```
 
 # Path Planning
