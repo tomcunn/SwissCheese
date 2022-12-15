@@ -9,9 +9,13 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+
+//#define PRINT_JOINTS
+
 //Hardware Assignments
 #define  MAX_VELOCITY  90000
 #define  MAX_ACCELERATION  2000
+#define  ERROR_TOLERANCE 5
 
 #define StepA    A0
 #define DirA     A1
@@ -21,23 +25,35 @@
 #define DirB     48
 #define EnableB  A8
 
-
 //Function prototypes
 void  SetupTimer1(void);
 void  SetupTimer0(void);
 void  MotionAccelerationControl(struct MovementParms *MotorCurrent, struct MovementParms *MotorDesired);
 void  MotionVelocityControl    (struct MovementParms *MotorCurrent, struct MovementParms *MotorDesired);
+void  InverseKinematics        (unsigned int x, unsigned int y, struct Joint_Distances *JointLength);
 void  WriteStepSize(struct MovementParms *Motor);
 static int counter=0;
+
+#define Bx_distance 230
+#define Steps_per_mm 27.03f 
+
 
 //Create a structure for movement data
 struct MovementParms
 {
-  signed int Position;
-  signed int Velocity;
-  signed int Acceleration;
-  unsigned int TimerMatchValue;
-  bool Direction;
+  signed long  Position;          // steps  - Everytime the interrupt is triggered, this occurs
+  signed int   Velocity;          // 
+  signed int   Acceleration;      //
+  unsigned int TimerMatchValue;   //
+  bool         Direction;         //
+  bool         Hold;              //
+};
+
+struct Joint_Distances
+{
+   unsigned int AD;               // mm
+   unsigned int BD;               // mm
+   unsigned int AB;               // mm
 };
 
 //Create instance of three structures 
@@ -45,6 +61,8 @@ volatile struct MovementParms MotorA_Desired;
 volatile struct MovementParms MotorA_Current;
 volatile struct MovementParms MotorB_Desired;
 volatile struct MovementParms MotorB_Current;
+
+struct Joint_Distances Joints;
 
 
 //Static Variables that are accessed in interrupts
@@ -59,6 +77,24 @@ static volatile bool RunTask_10ms = 0;
 static volatile bool flopa = 0;
 static volatile bool flopb = 0;
 
+
+//Kinematics (distance in mm)
+//  A(0,0)        B(100,0)
+//   A          B
+//     \       /
+//      \     /
+//       \   /
+//         D
+//Given x,y, find the distances AD, BD
+void InverseKinematics(unsigned int x, unsigned int y, struct Joint_Distances *JointLength)
+{
+  unsigned long x2 = x * x;
+  unsigned long y2 = y * y;
+  
+  JointLength->AD = (unsigned int)sqrt(x2+y2);
+  JointLength->BD = sqrt((Bx_distance-x)*(Bx_distance-x)+y2);
+}
+
 //**************************************
 // Timer1 - 16 bit timer Interrupt  
 // Motor A
@@ -67,28 +103,30 @@ static volatile bool flopb = 0;
 ISR(TIMER4_COMPA_vect)  
 {   
      //Check the direction pin and determine the position
-     if(MotorA_Current.Direction == 1)
-     {
-        digitalWrite(DirA,1);
-        MotorA_Current.Position++;
-     }
-     else
-     {
-       digitalWrite(DirA,0);
-       MotorA_Current.Position--;
-     }
-    
-     if(flopa)
-     {
-        digitalWrite(StepA,1);
-        flopa = 0;
-     }
-    else
+    if(MotorA_Current.Hold == false)
     {
-        digitalWrite(StepA,0);
-        flopa=1;
+      if(MotorA_Current.Direction == 1)
+      {
+          digitalWrite(DirA,1);
+          MotorA_Current.Position++;
+      }
+      else
+      {
+        digitalWrite(DirA,0);
+        MotorA_Current.Position--;
+      }
+      
+      if(flopa)
+      {
+          digitalWrite(StepA,1);
+          flopa = 0;
+      }
+      else
+      {
+          digitalWrite(StepA,0);
+          flopa=1;
+      }
     }
-
    //tempA =StepSpeedA;
    OCR4A= StepSpeedA;
   
@@ -101,30 +139,32 @@ ISR(TIMER4_COMPA_vect)
 //**************************************
 ISR(TIMER3_COMPA_vect)  
 {   
-     //Check the direction pin and determine the position
-     if(MotorB_Current.Direction == 1)
-     {
-        digitalWrite(DirB,1);
-        MotorB_Current.Position++;
-     }
-     else
-     {
-       digitalWrite(DirB,0);
-       MotorB_Current.Position--;
-     }
-
-
-     if(flopb)
-     {
-        digitalWrite(StepB,1);
-        flopb = 0;
-     }
-    else
+    if(MotorB_Current.Hold == false)
     {
-        digitalWrite(StepB,0);
-        flopb=1;
+      //Check the direction pin and determine the position
+      if(MotorB_Current.Direction == 1)
+      {
+         digitalWrite(DirB,0);
+         MotorB_Current.Position++;
+      }
+      else
+      {
+         digitalWrite(DirB,1);
+         MotorB_Current.Position--;
+      }
+
+
+      if(flopb)
+      {
+         digitalWrite(StepB,1);
+         flopb = 0;
+      }
+      else
+      {
+         digitalWrite(StepB,0);
+         flopb=1;
+      }
     }
-   
    //tempB = StepSpeedB;
    OCR3A =  StepSpeedB;
 }
@@ -272,6 +312,12 @@ void setup()
   pinMode(EnableA,OUTPUT);
   pinMode(EnableB,OUTPUT);
 
+  digitalWrite(EnableA, LOW);
+  digitalWrite(EnableB, LOW);
+
+  MotorA_Current.Hold = true;
+  MotorB_Current.Hold = true;
+
   //Setup Timers
   SetupTimer3();
   SetupTimer4();
@@ -294,11 +340,10 @@ void setup()
 
   digitalWrite(DirB,1);
   digitalWrite(DirA,1);
-  digitalWrite(EnableA, LOW);
-  digitalWrite(EnableB, LOW);
 
-  MotorA_Current.Position = 0;
-  MotorB_Current.Position = 0;
+  //Need to start in a known position
+  MotorA_Current.Position = 100;
+  MotorB_Current.Position = 100;
 
   delay(2000);
 
@@ -317,28 +362,40 @@ void loop()
 
   if(RunTask_10ms)
   {
-
-    MotorA_Desired.Acceleration = 50;
-    MotorB_Desired.Acceleration = 50;
-
-    MotorA_Desired.Velocity = 25000;
-    MotorB_Desired.Velocity = 25000;
+    //Determine the x,y desired
     
-    //Call this function to compute the current velocity,this
-    //takes into account the acceleration
-    MotionVelocityControl(&MotorA_Current, &MotorA_Desired);
-    MotionVelocityControl(&MotorB_Current, &MotorB_Desired);
+    //Compute the joint lengths
+    InverseKinematics(115,230,&Joints);
+
+#ifdef PRINT_JOINTS
+    Serial.print(Joints.AD);
+    Serial.print(",");
+    Serial.println(Joints.BD);
+#endif //PRINT_JOINTS
+    
+    //Assign the joint length to the corresponding motor system
+    MotorA_Desired.Position = (signed long)(Joints.AD * Steps_per_mm);
+    MotorB_Desired.Position = (signed long)(Joints.BD * Steps_per_mm);
+    
+    //Compute the motion profile based on the position error
+    MotionPositionControl(&MotorA_Current, &MotorA_Desired);
+    MotionPositionControl(&MotorB_Current, &MotorB_Desired);
+
+    Serial.print(MotorA_Desired.Position);
+    Serial.print(",");
+    Serial.println(MotorA_Current.Position);
 
     //Call function to covert the velocity from mm/min to timer value
     WriteStepSize(&MotorA_Current);
     WriteStepSize(&MotorB_Current);
 
+    //The StepSpeed is used by the interrupt
     StepSpeedA = MotorA_Current.TimerMatchValue;
     StepSpeedB = MotorB_Current.TimerMatchValue;
 
-    Serial.print(MotorA_Current.Position);
-    Serial.print(",");
-    Serial.println(MotorB_Current.Position);
+    //Serial.print(MotorA_Current.Position);
+    //Serial.print(",");
+    //Serial.println(MotorB_Current.Position);
 
     if(FirstLoop)
     {
@@ -349,16 +406,47 @@ void loop()
       // 
       FirstLoop = false;
     }
+
     //Clear the flag that gets set by the interrupt
     //This was added at end to detect overruns of the 10ms task
     RunTask_10ms = 0;
   }
 }
 
+
+//*********************************************
+// MotionPositionControl
+//*********************************************
+void MotionPositionControl(struct MovementParms *MotorCurrent, struct MovementParms *MotorDesired)
+{
+  signed int Position_Error;
+
+  //Compute the error 
+  //Positive value means the cable is too short
+  Position_Error = (MotorDesired->Position) - (MotorCurrent->Position);
+ 
+  //The cable is too short, make it longer
+  if(Position_Error > ERROR_TOLERANCE)
+  {
+     MotorCurrent->Velocity = 1000;
+     MotorCurrent->Hold = false;
+  }
+  //The cable is too long, make it shorter
+  else if(Position_Error < -ERROR_TOLERANCE)
+  {
+     MotorCurrent->Velocity = -1000;
+     MotorCurrent->Hold = false;
+  }
+  //Just the right length
+  else
+  {
+     MotorCurrent->Velocity = 10;
+     MotorCurrent->Hold = true;
+  }
+}
+
 //*********************************************
 // MotionVelocityControl
-//
-// Uses all global structures
 //*********************************************
 void MotionVelocityControl(struct MovementParms *MotorCurrent, struct MovementParms *MotorDesired)
 {  
