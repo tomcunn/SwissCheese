@@ -341,7 +341,7 @@ void setup()
   digitalWrite(DirB,1);
   digitalWrite(DirA,1);
 
-  //Need to start in a known position
+  //Need to start in a known position, this needs to be in steps, not mm
   MotorA_Current.Position = 100;
   MotorB_Current.Position = 100;
 
@@ -419,10 +419,10 @@ void loop()
 //*********************************************
 void MotionPositionControl(struct MovementParms *MotorCurrent, struct MovementParms *MotorDesired)
 {
-  signed int Position_Error;
+  signed long Position_Error;
 
   //Compute the error 
-  //Positive value means the cable is too short
+  //Positive value means the cable is too short, this is in steps
   Position_Error = (MotorDesired->Position) - (MotorCurrent->Position);
  
   //The cable is too short, make it longer
