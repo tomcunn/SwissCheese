@@ -9,13 +9,14 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-
-//#define PRINT_JOINTS
+#define PRINT_XY
+#define PRINT_JOINTS
+#define PRINT_STEPS
 
 //Hardware Assignments
 #define  MAX_VELOCITY  90000
 #define  MAX_ACCELERATION  2000
-#define  ERROR_TOLERANCE 5
+#define  ERROR_TOLERANCE 100
 
 #define StepA    A0
 #define DirA     A1
@@ -26,17 +27,24 @@
 #define EnableB  A8
 
 //Function prototypes
-void  SetupTimer1(void);
-void  SetupTimer0(void);
+void  SetupTimer1              (void);
+void  SetupTimer0              (void);
 void  MotionAccelerationControl(struct MovementParms *MotorCurrent, struct MovementParms *MotorDesired);
 void  MotionVelocityControl    (struct MovementParms *MotorCurrent, struct MovementParms *MotorDesired);
+void  ForwardKinematics        (struct Joint_Distances *JointLength, struct Coordinates *CurrentCoordinates);
 void  InverseKinematics        (unsigned int x, unsigned int y, struct Joint_Distances *JointLength);
-void  WriteStepSize(struct MovementParms *Motor);
+void  WriteStepSize            (struct MovementParms *Motor);
+void  ReadJoystick             (struct Coordinates *lDesiredCoordinates);
+
 static int counter=0;
 
-#define Bx_distance 230
-#define Steps_per_mm 27.03f 
+//394mm is the initial joint length.
 
+#define Bx_distance 470 //18.5 inches
+#define Steps_per_mm 27.03f  * 2  //Added the x2 because we changed to a higher frequency get 50% duty cycle. Now we interrupt on the rising and falling edge of the pulse. 
+
+#define MAX_X 450
+#define MAX_Y 550
 
 //Create a structure for movement data
 struct MovementParms
@@ -51,9 +59,18 @@ struct MovementParms
 
 struct Joint_Distances
 {
-   unsigned int AD;               // mm
-   unsigned int BD;               // mm
-   unsigned int AB;               // mm
+   float AD;               // mm
+   float BD;               // mm
+   float AB;               // mm
+};
+
+
+
+
+struct Coordinates
+{
+  float x;
+  float y;
 };
 
 //Create instance of three structures 
@@ -62,7 +79,11 @@ volatile struct MovementParms MotorA_Current;
 volatile struct MovementParms MotorB_Desired;
 volatile struct MovementParms MotorB_Current;
 
+
+struct MovementParms LinearMotion;
 struct Joint_Distances Joints;
+struct Coordinates CurrentCoordinates;
+struct Coordinates DesiredCoordinates;
 
 
 //Static Variables that are accessed in interrupts
@@ -88,12 +109,29 @@ static volatile bool flopb = 0;
 //Given x,y, find the distances AD, BD
 void InverseKinematics(unsigned int x, unsigned int y, struct Joint_Distances *JointLength)
 {
-  unsigned long x2 = x * x;
-  unsigned long y2 = y * y;
+  float x2 = (float)x * x;
+  float y2 = (float)y * y;
   
-  JointLength->AD = (unsigned int)sqrt(x2+y2);
-  JointLength->BD = sqrt((Bx_distance-x)*(Bx_distance-x)+y2);
+  JointLength->AD = (float)sqrt(x2+y2);
+  JointLength->BD = sqrt(((float)Bx_distance-x)*(Bx_distance-x)+y2);
 }
+
+
+//Given the joint lengths, determine the position x,y
+void ForwardKinematics(struct Joint_Distances *JointLength, struct Coordinates *Coord)
+{
+  float AD2 = JointLength->AD * JointLength->AD;
+  float BD2 = JointLength->BD * JointLength->BD;
+
+  float x = (AD2 - BD2 + ((float)Bx_distance * Bx_distance)) / (2 * Bx_distance);
+  float y2 = AD2 - (x * x);
+
+  if(y2 < 0) return -1;
+    Coord->x = x;
+    Coord->y = sqrt(y2);
+  return 0;
+}
+
 
 //**************************************
 // Timer1 - 16 bit timer Interrupt  
@@ -312,6 +350,9 @@ void setup()
   pinMode(EnableA,OUTPUT);
   pinMode(EnableB,OUTPUT);
 
+  pinMode(A3,INPUT);
+  pinMode(A4,INPUT);
+
   digitalWrite(EnableA, LOW);
   digitalWrite(EnableB, LOW);
 
@@ -342,8 +383,11 @@ void setup()
   digitalWrite(DirA,1);
 
   //Need to start in a known position, this needs to be in steps, not mm
-  MotorA_Current.Position = 100;
-  MotorB_Current.Position = 100;
+  MotorA_Current.Position = (signed long)394 * Steps_per_mm;
+  MotorB_Current.Position = (signed long)394 * Steps_per_mm ;
+
+  DesiredCoordinates.x = 235;
+  DesiredCoordinates.y = 316;
 
   delay(2000);
 
@@ -363,27 +407,38 @@ void loop()
   if(RunTask_10ms)
   {
     //Determine the x,y desired
-    
-    //Compute the joint lengths
-    InverseKinematics(115,230,&Joints);
+    ReadJoystick(&DesiredCoordinates);
+
+    #ifdef PRINT_XY
+    Serial.print(DesiredCoordinates.x);
+    Serial.print(",");
+    Serial.print(DesiredCoordinates.y);
+#endif //PRINT_XY
+
+    //Compute the joint lengths, pass in mm
+    InverseKinematics(DesiredCoordinates.x,DesiredCoordinates.y ,&Joints);
 
 #ifdef PRINT_JOINTS
+    Serial.print(",");
     Serial.print(Joints.AD);
     Serial.print(",");
-    Serial.println(Joints.BD);
+    Serial.print(Joints.BD);
 #endif //PRINT_JOINTS
     
     //Assign the joint length to the corresponding motor system
-    MotorA_Desired.Position = (signed long)(Joints.AD * Steps_per_mm);
-    MotorB_Desired.Position = (signed long)(Joints.BD * Steps_per_mm);
+    MotorA_Desired.Position = (signed long)(Joints.BD * Steps_per_mm);
+    MotorB_Desired.Position = (signed long)(Joints.AD * Steps_per_mm);
     
     //Compute the motion profile based on the position error
     MotionPositionControl(&MotorA_Current, &MotorA_Desired);
     MotionPositionControl(&MotorB_Current, &MotorB_Desired);
 
+#ifdef PRINT_STEPS
+    Serial.print(",");
     Serial.print(MotorA_Desired.Position);
     Serial.print(",");
-    Serial.println(MotorA_Current.Position);
+    Serial.print(MotorA_Current.Position);
+#endif //PRINT_JOINTS
 
     //Call function to covert the velocity from mm/min to timer value
     WriteStepSize(&MotorA_Current);
@@ -393,9 +448,15 @@ void loop()
     StepSpeedA = MotorA_Current.TimerMatchValue;
     StepSpeedB = MotorB_Current.TimerMatchValue;
 
-    //Serial.print(MotorA_Current.Position);
-    //Serial.print(",");
-    //Serial.println(MotorB_Current.Position);
+    //Compute the current position that the machine is in.
+    ForwardKinematics(&Joints,&CurrentCoordinates);
+
+#ifdef PRINT_XY
+    Serial.print(",");
+    Serial.print(CurrentCoordinates.x);
+    Serial.print(",");
+    Serial.println(CurrentCoordinates.y);
+#endif //PRINT_XY
 
     if(FirstLoop)
     {
@@ -544,4 +605,50 @@ void MotionAccelerationControl(struct MovementParms *MotorCurrent, struct Moveme
          MotorCurrent->Velocity = -MAX_VELOCITY;
       }
    }
+}
+
+
+//*****************
+//  Read Joystick
+//
+//*****************
+void ReadJoystick(struct Coordinates *lDesiredCoordinates)
+{
+  int vert;
+  int horz;
+  
+  vert = analogRead(A3);
+  horz = analogRead(A4);
+  
+  if(vert > 700)
+  {
+    if(lDesiredCoordinates->x < MAX_X)
+    {
+       lDesiredCoordinates->x = lDesiredCoordinates->x +1;
+    }
+  }
+  else if(vert<  300)
+  {
+    if(lDesiredCoordinates->x > 2)
+    {
+       lDesiredCoordinates->x = lDesiredCoordinates->x -1;
+    }
+  }
+
+  if(horz > 700)
+  {
+    if(lDesiredCoordinates->y < MAX_Y)
+    {
+      lDesiredCoordinates->y = lDesiredCoordinates->y +1;
+    }
+  }
+  else if(horz<  300)
+  {
+    if(lDesiredCoordinates->y > 2)
+    {
+      lDesiredCoordinates->y = lDesiredCoordinates->y -1;
+    }
+  }
+
+
 }
