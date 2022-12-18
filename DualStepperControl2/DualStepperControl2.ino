@@ -464,30 +464,36 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
 {
   int vert;
   int horz;
-  
+  int DEADBAND = 50;
+  int CENTERX = 500;
+  int CENTERY = 500;
+  int GAIN  = 8;
+
   vert = analogRead(A3);
   horz = analogRead(A4);
   
-  if(vert > 700)
+  //Create a proportional scheme for motion
+
+  if(vert > (CENTERX + DEADBAND))
   {
-      x_motion->Velocity = -3000;    //mm/min
+    x_motion->Velocity = -1 * GAIN * (vert - CENTERX + DEADBAND);    //mm/min
   }
-  else if(vert<  300)
+  else if(vert< (CENTERX - DEADBAND))
   {
-      x_motion->Velocity = 3000;
+    x_motion->Velocity = GAIN * (CENTERX - DEADBAND - vert); 
   }
   else
   {
-      x_motion->Velocity = 0;
+    x_motion->Velocity = 0;
   }
 
-  if(horz > 700)
+  if(horz > (CENTERY + DEADBAND))
   {
-      y_motion->Velocity = 3000;
+    y_motion->Velocity = -1 * GAIN * (vert - CENTERY + DEADBAND);    //mm/min
   }
-  else if(horz<  300)
+  else if(horz < (CENTERY - DEADBAND))
   {
-      y_motion->Velocity = -3000;
+    y_motion->Velocity = GAIN * (CENTERY - DEADBAND - vert); 
   }
   else
   {
