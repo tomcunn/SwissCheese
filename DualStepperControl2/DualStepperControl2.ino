@@ -26,6 +26,13 @@
 #define DirB     48
 #define EnableB  A8
 
+#define SOLENOID 9
+#define LEDA     64
+#define SWITCHA  59
+#define LEDB     66
+#define SWITCHB  44
+
+
 //Function prototypes
 void  SetupTimer1              (void);
 void  SetupTimer0              (void);
@@ -354,6 +361,13 @@ void setup()
   pinMode(A3,INPUT);
   pinMode(A4,INPUT);
 
+  pinMode(SOLENOID,OUTPUT);
+  pinMode(LEDA,OUTPUT);
+  pinMode(SWITCHA,INPUT);
+  pinMode(LEDB,OUTPUT);
+  pinMode(SWITCHB,INPUT);
+
+
   digitalWrite(EnableA, LOW);
   digitalWrite(EnableB, LOW);
 
@@ -382,6 +396,7 @@ void setup()
 
   digitalWrite(DirB,1);
   digitalWrite(DirA,1);
+  digitalWrite(SOLENOID,0);
 
   //Need to start in a known position, this needs to be in steps, not mm
   MotorA_Current.Position = (signed long)394 * Steps_per_mm;
@@ -417,12 +432,6 @@ void loop()
     CurrentJoints.AB =  MotorA_Current.Position / Steps_per_mm;
     CurrentJoints.BD =  MotorB_Current.Position / Steps_per_mm;
 
-    Serial.print(MotorA_Current.Position);
-    Serial.print(",");
-    Serial.print(MotorB_Current.Position);
-    Serial.print(",");
-    Serial.print( CurrentJoints.BD );
-
     //Compute the current position that the machine is in.
     ForwardKinematics(&CurrentJoints,&CurrentCoordinates);
 
@@ -436,6 +445,11 @@ void loop()
     //The StepSpeed is used by the interrupt
     StepSpeedA = MotorA_Current.TimerMatchValue;
     StepSpeedB = MotorB_Current.TimerMatchValue;
+
+   // Serial.print(CurrentCoordinates.x);
+   // Serial.print(",");
+   // Serial.println(CurrentCoordinates.y);
+
 
     if(FirstLoop)
     {
@@ -467,39 +481,67 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
   int DEADBAND = 50;
   int CENTERX = 500;
   int CENTERY = 500;
-  int GAIN  = 8;
+  int GAIN  = 12;
 
-  vert = analogRead(A3);
-  horz = analogRead(A4);
+  int A;
+  int B;
+
+  horz = analogRead(A3);
+  vert = analogRead(A4);
   
   //Create a proportional scheme for motion
 
-  if(vert > (CENTERX + DEADBAND))
+  if(vert > (CENTERY + DEADBAND))
   {
-    x_motion->Velocity = -1 * GAIN * (vert - CENTERX + DEADBAND);    //mm/min
+    y_motion->Velocity = GAIN * (vert - CENTERY + DEADBAND);    //mm/min
   }
-  else if(vert< (CENTERX - DEADBAND))
+  else if(vert< (CENTERY - DEADBAND))
   {
-    x_motion->Velocity = GAIN * (CENTERX - DEADBAND - vert); 
-  }
-  else
-  {
-    x_motion->Velocity = 0;
-  }
-
-  if(horz > (CENTERY + DEADBAND))
-  {
-    y_motion->Velocity = -1 * GAIN * (vert - CENTERY + DEADBAND);    //mm/min
-  }
-  else if(horz < (CENTERY - DEADBAND))
-  {
-    y_motion->Velocity = GAIN * (CENTERY - DEADBAND - vert); 
+    y_motion->Velocity = -1*GAIN * (CENTERY - DEADBAND - vert); 
   }
   else
   {
-      y_motion->Velocity = 0;    
+    y_motion->Velocity = 0;
   }
 
+  if(horz > (CENTERX + DEADBAND))
+  {
+    x_motion->Velocity = -1 * GAIN * (horz - CENTERX + DEADBAND);    //mm/min
+  }
+  else if(horz < (CENTERX - DEADBAND))
+  {
+    x_motion->Velocity = GAIN * (CENTERX - DEADBAND - horz); 
+  }
+  else
+  {
+    x_motion->Velocity = 0;    
+  }
+
+   Serial.print( horz);
+   Serial.print(",");
+   Serial.print( vert); 
+   Serial.print(",");
+   Serial.print( x_motion->Velocity);
+   Serial.print(",");
+   Serial.print(y_motion->Velocity);
+
+  A = digitalRead(SWITCHA);
+  B = digitalRead(SWITCHB);
+
+   Serial.print(",");
+   Serial.print(A);
+   Serial.print(",");
+   Serial.println(B);
+  if(B)
+  {
+     digitalWrite(SOLENOID,0);
+     digitalWrite(LEDB,0);
+  }
+  else
+  {
+      digitalWrite(SOLENOID,1);
+      digitalWrite(LEDB,1);
+  }
 }
 
 void ComputeJointVelocity(void)
@@ -523,18 +565,6 @@ void ComputeJointVelocity(void)
 
   MotorA_Current.Velocity = (int)vel_AD;
   MotorB_Current.Velocity = (int)vel_BD;
-
-
-    Serial.print(",");
-    Serial.print(DesiredJoints.BD);
-    Serial.print(",");
-    Serial.print(CurrentJoints.BD); //mm
-
-    Serial.print(",");
-    Serial.print(vel_AD);
-    Serial.print(",");
-    Serial.println(vel_BD); //mm
-
 
   if((vel_AD >= -10) && (vel_AD <= 10 ))
   {
