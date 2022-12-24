@@ -18,54 +18,63 @@ WHITE = (230, 230, 230)
 GREY = (140,140,140)
 
 # Creating a board that is 30" Wide by 48" tall.
-# Scale is # of pixels per inch
-scale = 20
-height = 40 * scale
-width = 24 * scale
+# 1 pixel per mm
+height = 600
+width = 470
 
 #setup the position of the actuators
 #Compute everything in inches, then scale later
 A = ((0,0))
-B = ((30, 0))
-L_a = 40
-L_b = 40
-L_c = 24
-current_position_x = 12
-current_position_y = 30
+B = ((470, 0))
+AD = 394
+BD = 394
+AB = 470
+current_position_x = 235
+current_position_y = 316
 
 
 #Create a list of circles
 #(center x, center y, radius)
-circle_def_list = [(5,4,1.5),
-                   (12,5,1),
-                   (17,6,1.5),
-                   (21,3,0.5),
-                   (4,10,2),
-                   (8,8,1),
-                   (12,10,0.5),
-                   (16,11,1.5),
-                   (10,11,1.0)]
+circle_def_list = [(127,102,38),
+                   (305,127,25),
+                   (432,152,38),
+                   (533,76,13),
+                   (102,254,51),
+                   (203,203,25),
+                   (305,254,13),
+                   (406,280,38)]
 
 DISPLAYSURF = pygame.display.set_mode((width,height))
 pygame.display.set_caption("Jeu Gruyere")
 DISPLAYSURF.fill(WOOD)
 
-#Given the lengths of the strings (L_a and L_b) and the distance between the two (L_c) 
-#compute the x,y (0,0) is top left
-def ForwardKinematics(L_a,  L_b,  L_c):
+#Kinematics (distance in mm)
+#  A(0,0)        B(470,0)
+#   A          B
+#     \       /
+#      \     /
+#       \   /
+#         D
+#Given x,y, find the distances AD, BD
+def ForwardKinematics(AD,  BD,  AB):
     #Compute the angle of A
-    Angle_A = ((L_b*L_b)+(L_c*L_c)-(L_a*L_a))/(2*L_b*L_c)
-    Angle_A = math.acos(Angle_A)
-    #Compute the x,y based on a triangle
-    x = math.cos(Angle_A)*L_b
-    y = math.sin(Angle_A)*L_b
+    AD2 = AD * AD
+    BD2 = BD * BD
+
+    x = (AD2 - BD2 + (Bx_distance * Bx_distance)) / (2 * Bx_distance)
+    y2 =  AD2 - (x * x);
+
+    y = math.sqrt(y2)
+
     return x,y
 
 #Given x,y (0,0) is top left and the length between the two joints, compute the L_a and L_b
-def InverseKinematics(x,y,L_c):
-    L_a = math.sqrt(x*x+y*y)
-    L_b = math.sqrt((L_c-x)*(L_c-x)+y*y)
-    return L_a, L_b
+def InverseKinematics(x,y,AB):
+    x2 = x * x;
+    y2 = y * y;
+    AD = math.sqrt(x2+y2)
+    BD = math.sqrt((AB-x)*(AB-x)+y2);
+    return AD, BD
 
 def DetectFall(x,y,circle_x,circle_y, circle_r):
 
@@ -85,10 +94,10 @@ def DetectFall(x,y,circle_x,circle_y, circle_r):
 while True:
     if(KINEMATICS_TYPE == 'FORWARD'):
         #Compute the position of the ball based on the line lengths
-        current_position_x,current_position_y = ForwardKinematics(L_a,L_b,L_c)
+        current_position_x,current_position_y = ForwardKinematics(AD,BD,AB)
     else:
         #Testing the inverse kinematics
-        L_a, L_b = InverseKinematics(current_position_x,current_position_y,L_c)
+        AD, BD = InverseKinematics(current_position_x,current_position_y,AB)
 
     DISPLAYSURF.fill(WOOD)
 
@@ -100,28 +109,28 @@ while True:
 
         if ((event.type == pygame.KEYDOWN) and (KINEMATICS_TYPE == 'FORWARD')):
             if event.key == pygame.K_q:
-               L_b -= 0.25
+               BD -= 1
             if event.key == pygame.K_w:
-               L_a -= 0.25
+               AD -= 1
             if event.key == pygame.K_a:
-               L_b += 0.25
+               BD += 1
             if event.key == pygame.K_s:
-               L_a += 0.25
+               AD += 1
         elif ((event.type == pygame.KEYDOWN) and (KINEMATICS_TYPE == 'INVERSE')):
             if event.key == pygame.K_UP:
-               current_position_y -= 0.25
+               current_position_y -= 1
             if event.key == pygame.K_DOWN:
-               current_position_y += 0.25
+               current_position_y += 1
             if event.key == pygame.K_RIGHT:
-               current_position_x += 0.25
+               current_position_x += 1
             if event.key == pygame.K_LEFT:
-               current_position_x -= 0.25
+               current_position_x -= 1
 
-    #Scale from inches to pixels for drawing
-    current_position = ((scale * current_position_x, scale * current_position_y))
+    #Scale from mm to pixels for drawing
+    current_position = ((current_position_x,current_position_y))
 
     #Debugging
-    print(L_a,L_b,current_position_x,current_position_y)
+    print(AD,BD,current_position_x,current_position_y)
 
     #Draw the failure areas
     for a in range(0,len(circle_def_list)):
@@ -137,12 +146,12 @@ while True:
           color = RED
         else:
           color = BLACK
-        pygame.draw.circle(DISPLAYSURF, color, (x*scale,y*scale), r*scale)
+        pygame.draw.circle(DISPLAYSURF, color, (x,y), r)
 
     # Draw a the ball and lines
     pygame.draw.line(DISPLAYSURF, GREY, (0,0),current_position,1)
     pygame.draw.line(DISPLAYSURF, GREY, (width,0),current_position, 1)
-    pygame.draw.circle(DISPLAYSURF, WHITE, current_position, 10)
+    pygame.draw.circle(DISPLAYSURF, WHITE, current_position, 27)
 
 
     # Flip the display
