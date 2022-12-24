@@ -45,6 +45,9 @@ circle_def_list = [(127,102,38),
                    (406,280,38)]
 
 DISPLAYSURF = pygame.display.set_mode((width,height))
+#Create an array to tract the data
+tracking_data = np.zeros((width,height))
+
 pygame.display.set_caption("Jeu Gruyere")
 DISPLAYSURF.fill(WOOD)
 
@@ -118,13 +121,13 @@ while True:
                AD += 1
         elif ((event.type == pygame.KEYDOWN) and (KINEMATICS_TYPE == 'INVERSE')):
             if event.key == pygame.K_UP:
-               current_position_y -= 1
+               current_position_y -= 5
             if event.key == pygame.K_DOWN:
-               current_position_y += 1
+               current_position_y += 5
             if event.key == pygame.K_RIGHT:
-               current_position_x += 1
+               current_position_x += 5
             if event.key == pygame.K_LEFT:
-               current_position_x -= 1
+               current_position_x -= 5
 
     #Scale from mm to pixels for drawing
     current_position = ((current_position_x,current_position_y))
@@ -152,7 +155,22 @@ while True:
     pygame.draw.line(DISPLAYSURF, GREY, (0,0),current_position,1)
     pygame.draw.line(DISPLAYSURF, GREY, (width,0),current_position, 1)
     pygame.draw.circle(DISPLAYSURF, WHITE, current_position, 27)
+    tracking_data[current_position_x,current_position_y] = 1
+    
+    i= 0
+    b = 0
+    #draw the tracking line
+    for i in range(0,height):
+        
+        
+        for b in range(0,width):
 
+            #Check to see if we should draw this pixel
+            if(tracking_data[b][i] == 1):
+                DISPLAYSURF.set_at((b,i),(255,0,0))
+            b=b+1
+        i=i+1
+    
 
     # Flip the display
     pygame.display.flip()
