@@ -8,17 +8,22 @@ from os import path
 
 
 class SwissCheeseGymClass(gym.Env):
-  metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': ['human']}
   
-  def __init__(self):
-  
-     print('init basic')
-     return
+    def __init__(self):
+        print('init basic')
+        self.action_space = spaces.Discrete(4)
+        height = 600
+        width = 470
+        movementparms = np.array([width,height])
+        self.observation_space =spaces.Box(0, movementparms, dtype=np.float32)
+        return
 
     def step(self, action):
-        print('step)
+        action = 1
+        print('step')
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         print('reset')
     
     def render(self, mode='human'):
