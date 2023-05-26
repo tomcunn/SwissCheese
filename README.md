@@ -86,5 +86,22 @@ So far this appears to be the pinout of the RAMP 1.6 Board.
 
 ![image](https://user-images.githubusercontent.com/4383135/206915461-dd8e6569-5e97-4169-9c45-559e67a225a7.png)
 
+# Dual Joystick Control
+
+Creating a dual joystick to demo. There will be two modes:
+
+ * Each joystick y controls the length (no kinematics required, the human does the kinematics)
+ * One joystick controls the x,y 
+
+```
+//Joystick Wiring
+Wire Color    Physical  Jumper Board   MEGA
+Green/White   5V         Power          5V
+Blue          Gnd        Gnd            GND
+Orange/White  Right Y    AN0            A3
+Orange        Left Y     AN1            A4
+Blue/White    Right X    Switch A       A5
+Brown/White   Toggle     Switch B       D44
+```
 
 
