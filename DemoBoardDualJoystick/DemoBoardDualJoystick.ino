@@ -1,8 +1,6 @@
 //**************************************
-//*   Stepper Motor Control
-//*
-//*   Cloned from the AI project
-//*   12/11/2022
+//*   Dual Joystick Embedded Demo Board
+//*   05/25/2023
 //*   Cunningham
 //***************************************
 
@@ -27,10 +25,11 @@
 #define EnableB  A8
 
 #define SOLENOID 9
-#define LEDA     64
-#define SWITCHA  59
-#define LEDB     66
-#define SWITCHB  44
+#define TOGGLE_SWITCH  44
+
+#define JOYSTICK_RIGHT_Y  A3
+#define JOYSTICK_RIGHT_X  A5
+#define JOYSTICK_LEFT_Y   A4
 
 
 //Function prototypes
@@ -358,15 +357,12 @@ void setup()
   pinMode(EnableA,OUTPUT);
   pinMode(EnableB,OUTPUT);
 
-  pinMode(A3,INPUT);
-  pinMode(A4,INPUT);
+  pinMode(JOYSTICK_RIGHT_Y,INPUT);
+  pinMode(JOYSTICK_RIGHT_X,INPUT);
+  pinMode(JOYSTICK_LEFT_Y,INPUT);
+  pinMode(TOGGLE_SWITCH,INPUT);
 
   pinMode(SOLENOID,OUTPUT);
-  pinMode(LEDA,OUTPUT);
-  pinMode(SWITCHA,INPUT);
-  pinMode(LEDB,OUTPUT);
-  pinMode(SWITCHB,INPUT);
-
 
   digitalWrite(EnableA, LOW);
   digitalWrite(EnableB, LOW);
@@ -483,11 +479,11 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
   int CENTERY = 500;
   int GAIN  = 12;
 
-  int A;
-  int B;
+  int toggle_state;
 
-  horz = analogRead(A3);
-  vert = analogRead(A4);
+
+  horz = analogRead(JOYSTICK_RIGHT_X);
+  vert = analogRead(JOYSTICK_RIGHT_Y);
   
   //Create a proportional scheme for motion
 
@@ -525,22 +521,18 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
    Serial.print(",");
    Serial.print(y_motion->Velocity);
 
-  A = digitalRead(SWITCHA);
-  B = digitalRead(SWITCHB);
+  toggle_state = digitalRead(TOGGLE_SWITCH);
+ 
+  Serial.print(",");
+  Serial.println(toggle_state);
 
-   Serial.print(",");
-   Serial.print(A);
-   Serial.print(",");
-   Serial.println(B);
-  if(B)
+  if(toggle_state)
   {
      digitalWrite(SOLENOID,0);
-     digitalWrite(LEDB,0);
   }
   else
   {
       digitalWrite(SOLENOID,1);
-      digitalWrite(LEDB,1);
   }
 }
 
@@ -562,10 +554,10 @@ void ComputeJointVelocity(void)
   vel_BD = (DesiredJoints.BD - CurrentJoints.BD)*6000;  //mm/min
 
   //Set the velocity to the joint.
-
   MotorA_Current.Velocity = (int)vel_AD;
   MotorB_Current.Velocity = (int)vel_BD;
 
+  //Turn the Motors off if the velocity command is low enough
   if((vel_AD >= -10) && (vel_AD <= 10 ))
   {
     MotorA_Current.Hold = true;
@@ -583,6 +575,4 @@ void ComputeJointVelocity(void)
   {
     MotorB_Current.Hold = false;
   }
-  
-
 }
