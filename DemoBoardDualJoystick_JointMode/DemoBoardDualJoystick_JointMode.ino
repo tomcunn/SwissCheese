@@ -35,8 +35,6 @@
 //Function prototypes
 void  SetupTimer1              (void);
 void  SetupTimer0              (void);
-void  ForwardKinematics        (struct Joint_Distances *JointLength, struct Coordinates *CurrentCoordinates);
-void  InverseKinematics        (float x, float y, struct Joint_Distances *JointLength);
 void  WriteStepSize            (struct MovementParms *Motor);
 void  ReadJoystick             (void);
 
@@ -68,9 +66,6 @@ struct Joint_Distances
    float BD;               // mm
    float AB;               // mm
 };
-
-
-
 
 struct Coordinates
 {
@@ -106,38 +101,6 @@ static volatile bool flopa = 0;
 static volatile bool flopb = 0;
 
 
-//Kinematics (distance in mm)
-//  A(0,0)        B(100,0)
-//   A          B
-//     \       /
-//      \     /
-//       \   /
-//         D
-//Given x,y, find the distances AD, BD
-void InverseKinematics(float x, float y, struct Joint_Distances *JointLength)
-{
-  float x2 = x * x;
-  float y2 = y * y;
-  
-  JointLength->AD = (float)sqrt(x2+y2);
-  JointLength->BD = sqrt(((float)Bx_distance-x)*(Bx_distance-x)+y2);
-}
-
-
-//Given the joint lengths, determine the position x,y
-void ForwardKinematics(struct Joint_Distances *JointLength, struct Coordinates *Coord)
-{
-  float AD2 = JointLength->AD * JointLength->AD;
-  float BD2 = JointLength->BD * JointLength->BD;
-
-  float x = (AD2 - BD2 + ((float)Bx_distance * Bx_distance)) / (2 * Bx_distance);
-  float y2 = AD2 - (x * x);
-
-  if(y2 < 0) return -1;
-    Coord->x = x;
-    Coord->y = sqrt(y2);
-  return 0;
-}
 
 
 //**************************************
@@ -402,8 +365,6 @@ void setup()
   CurrentCoordinates.y = 316;
   Serial.println("SHOULD ONLY BE RUN ONCE"); //mm
 
-  InverseKinematics(CurrentCoordinates.x,CurrentCoordinates.y ,&CurrentJoints);
-
   delay(2000);
 
   //enable interrupts
@@ -424,7 +385,6 @@ void loop()
     //Determine the velocity that is requested by the joystick
     ReadJoystick();
 
-
     //Call function to convert the velocity from mm/min to timer value
     WriteStepSize(&MotorA_Current);
     WriteStepSize(&MotorB_Current);
@@ -432,11 +392,6 @@ void loop()
     //The StepSpeed is used by the interrupt
     StepSpeedA = MotorA_Current.TimerMatchValue;
     StepSpeedB = MotorB_Current.TimerMatchValue;
-
-   // Serial.print(CurrentCoordinates.x);
-   // Serial.print(",");
-   // Serial.println(CurrentCoordinates.y);
-
 
     if(FirstLoop)
     {
