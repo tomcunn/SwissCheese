@@ -44,7 +44,7 @@ static int counter=0;
 
 //394mm is the initial joint length.
 
-#define Bx_distance 470 //18.5 inches
+#define Bx_distance 610 //
 //#define Steps_per_mm (27.03f  * 2)  //Added the x2 because we changed to a higher frequency get 50% duty cycle. Now we interrupt on the rising and falling edge of the pulse. 
 #define Steps_per_mm 54.06f
 
@@ -360,7 +360,7 @@ void setup()
   pinMode(JOYSTICK_RIGHT_Y,INPUT);
   pinMode(JOYSTICK_RIGHT_X,INPUT);
   pinMode(JOYSTICK_LEFT_Y,INPUT);
-  pinMode(TOGGLE_SWITCH,INPUT);
+  pinMode(TOGGLE_SWITCH,INPUT_PULLUP);
 
   pinMode(SOLENOID,OUTPUT);
 
@@ -489,11 +489,11 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
 
   if(vert > (CENTERY + DEADBAND))
   {
-    y_motion->Velocity = GAIN * (vert - CENTERY + DEADBAND);    //mm/min
+    y_motion->Velocity = -1*GAIN * (vert - CENTERY + DEADBAND);    //mm/min
   }
   else if(vert< (CENTERY - DEADBAND))
   {
-    y_motion->Velocity = -1*GAIN * (CENTERY - DEADBAND - vert); 
+    y_motion->Velocity = GAIN * (CENTERY - DEADBAND - vert); 
   }
   else
   {
@@ -502,11 +502,11 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
 
   if(horz > (CENTERX + DEADBAND))
   {
-    x_motion->Velocity = -1 * GAIN * (horz - CENTERX + DEADBAND);    //mm/min
+    x_motion->Velocity =  GAIN * (horz - CENTERX + DEADBAND);    //mm/min
   }
   else if(horz < (CENTERX - DEADBAND))
   {
-    x_motion->Velocity = GAIN * (CENTERX - DEADBAND - horz); 
+    x_motion->Velocity =-1 * GAIN * (CENTERX - DEADBAND - horz); 
   }
   else
   {
