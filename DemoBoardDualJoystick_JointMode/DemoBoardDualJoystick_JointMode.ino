@@ -435,11 +435,11 @@ void  ReadJoystick()
 
   if(left_joy > (CENTERY + DEADBAND))
   {
-    MotorB_Current.Velocity = -1*GAIN * (left_joy - CENTERY + DEADBAND);    //mm/min
+    MotorB_Current.Velocity = -1*GAIN * (left_joy -(CENTERY + DEADBAND));    //mm/min
   }
   else if(left_joy< (CENTERY - DEADBAND))
   {
-    MotorB_Current.Velocity = GAIN * (CENTERY - DEADBAND - left_joy); 
+    MotorB_Current.Velocity = GAIN * ((CENTERY - DEADBAND) - left_joy); 
   }
   else
   {
@@ -448,11 +448,11 @@ void  ReadJoystick()
 
   if(right_joy > (CENTERX + DEADBAND))
   {
-     MotorA_Current.Velocity = -1 *  GAIN * (right_joy - CENTERX + DEADBAND);    //mm/min
+     MotorA_Current.Velocity = -1 *  GAIN * (right_joy - (CENTERX + DEADBAND));    //mm/min
   }
   else if(right_joy < (CENTERX - DEADBAND))
   {
-     MotorA_Current.Velocity =GAIN * (CENTERX - DEADBAND - right_joy); 
+     MotorA_Current.Velocity =GAIN * ((CENTERX - DEADBAND) - right_joy); 
   }
   else
   {
