@@ -489,11 +489,11 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
 
   if(vert > (CENTERY + DEADBAND))
   {
-    y_motion->Velocity = -1*GAIN * (vert - CENTERY + DEADBAND);    //mm/min
+    y_motion->Velocity = -1*GAIN * (vert - (CENTERY + DEADBAND));    //mm/min
   }
   else if(vert< (CENTERY - DEADBAND))
   {
-    y_motion->Velocity = GAIN * (CENTERY - DEADBAND - vert); 
+    y_motion->Velocity = GAIN * ((CENTERY - DEADBAND) - vert); 
   }
   else
   {
@@ -502,11 +502,11 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
 
   if(horz > (CENTERX + DEADBAND))
   {
-    x_motion->Velocity =  GAIN * (horz - CENTERX + DEADBAND);    //mm/min
+    x_motion->Velocity =  GAIN * (horz - (CENTERX + DEADBAND));    //mm/min
   }
   else if(horz < (CENTERX - DEADBAND))
   {
-    x_motion->Velocity =-1 * GAIN * (CENTERX - DEADBAND - horz); 
+    x_motion->Velocity =-1 * GAIN * ((CENTERX - DEADBAND) - horz); 
   }
   else
   {
