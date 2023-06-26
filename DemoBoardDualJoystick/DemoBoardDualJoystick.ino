@@ -528,11 +528,11 @@ void  ReadJoystick(struct MovementParms *x_motion, struct MovementParms *y_motio
 
   if(toggle_state)
   {
-     digitalWrite(SOLENOID,0);
+     digitalWrite(SOLENOID,1);
   }
   else
   {
-      digitalWrite(SOLENOID,1);
+      digitalWrite(SOLENOID,0);
   }
 }
 

@@ -494,11 +494,11 @@ void  ReadJoystick()
 
   if(toggle_state)
   {
-     digitalWrite(SOLENOID,0);
+     digitalWrite(SOLENOID,1);
   }
   else
   {
-      digitalWrite(SOLENOID,1);
+      digitalWrite(SOLENOID,0);
   }
 }
 
